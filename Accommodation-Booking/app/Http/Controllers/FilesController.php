@@ -20,7 +20,7 @@ class FilesController extends Controller
 
         $vNewPropertyId = $request->input('property_id');
         //$path = $request->file('image')->store('/PropertImages');
-        $path = $request->file('image')->storeAs('http://aldo.itphoenix.gr/PropertyImages', 'property-'.$vNewPropertyId.'.jpeg');
+        $path = $request->file('image')->storeAs('/PropertyImages', 'property-'.$vNewPropertyId.'.jpeg');
         return response()->json(['path' => $path], 200);
     }
 }
