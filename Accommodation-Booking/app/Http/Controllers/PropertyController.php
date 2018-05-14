@@ -23,47 +23,46 @@ class PropertyController extends Controller
         $to_date = $request->input('to_date');
 
         /*$searchResult = DB::table('properties')
-                      ->leftjoin('availability', 'properties.id','=','availability.property_id')
-                      ->where('availability.start_date', '<=', $to_date)
-                      ->where('availability.end_date', '>=', $from_date)
+                      ->leftjoin('availabilities', 'properties.id','=','availabilities.property_id')
+                      ->where('availabilities.start_date', '<=', $to_date)
+                      ->where('availabilities.end_date', '>=', $from_date)
                       ->where('properties.id', '=', 1)
-                      ->select('properties.id as property_id', 'properties.name', 'properties.address', 'properties.description', 'availability.*')
+                      ->select('properties.id as property_id', 'properties.name', 'properties.address', 'properties.description', 'availabilities.*')
                       ->get();*/
 
-        $searchQuery = "SELECT rooms.id, rooms.name ,".
-        "  max(case when (select count(1) from reservations where property_id = rooms.id) = 0 then '".$from_date."'".
-        "     when '".$from_date."' < bookings.start_date then '".$from_date."'".
-        "     when '".$from_date."' < bookings.end_date then bookings.end_date".
-        "     else '".$from_date."' end) as checkin,".
-        "  max(case  when '".$to_date."' > bookings.start_date and  '".$from_date."' < bookings.start_date then bookings.start_date".
-        "     when '".$from_date."' < bookings.start_date and  '".$to_date."' > bookings.start_date and '".$to_date."' < bookings.end_date then bookings.end_date".
-        "     when '".$to_date."' > (select max(end_date) from reservations where property_id= bookings.property_id) then  '".$to_date."'".
-        "     when '".$to_date."' < (select min(start_date) from reservations where property_id= bookings.property_id) then  '".$to_date."'".
-        "     when (select count(1) from reservations where property_id = rooms.id) = 0 then '".$to_date."'".
-        "     else null".
-        "    end) as checkout".
-        " FROM properties rooms".
-        " left outer join reservations bookings  on bookings.property_id = rooms.id".
-        " inner join availability availability on availability.property_id = rooms.id".
-        " WHERE  ('".$from_date."' < bookings.start_date or '".$to_date."' < bookings.start_date)".
-        " OR ('".$from_date."' > bookings.end_date or '".$to_date."' > bookings.end_date)".
-        " OR 0 = (select count(1) from reservations where property_id = rooms.id)".
-        " AND availability.start_date <= '".$from_date."' AND availability.end_date >= '".$to_date."'".
-        " group by rooms.id, rooms.name";
+        $searchQuery = " SELECT p.id property_id, p.name as property_name,".
+        " ifnull(b.checkin,'".$from_date."') as available_from,".
+        " ifnull(b.checkout,'".$to_date."') as available_to".
+        " FROM properties p".
+        " inner join availabilities a on a.property_id=p.id".
+        " LEFT OUTER JOIN ".
+        " (".
+        "    SELECT rooms.id, rooms.name ,".
+        "		   max(case".
+        "			  when '".$from_date."' >= bookings.start_date and '".$to_date."' <= bookings.end_date then -1".
+        "			  when '".$from_date."' < bookings.start_date then '".$from_date."' ".
+        "			  when '".$from_date."' < bookings.end_date then bookings.end_date ".
+        "			  else '".$from_date."' end) as checkin,".
+        "		   max(case  ".
+        "			  when '".$from_date."' >= bookings.start_date and '".$to_date."' <= bookings.end_date then -1".
+        "			  when '".$to_date."' > bookings.start_date and  '".$from_date."' < bookings.start_date then bookings.start_date ".
+        "			  when '".$from_date."' < bookings.start_date and  '".$to_date."' > bookings.start_date and '".$to_date."' < bookings.end_date then bookings.end_date ".
+        "			  when '".$to_date."' > (select max(end_date) from reservations where property_id= bookings.property_id) then  '".$to_date."'".
+        "	      else null".
+        "		   end) as checkout".
+        "	  FROM properties rooms".
+        "	  left outer join reservations bookings  on bookings.property_id = rooms.id".
+        "	  inner join availabilities availabilities on availabilities.property_id = rooms.id".
+        "	  WHERE  (bookings.start_date BETWEEN  '".$from_date."' and  '".$to_date."' OR bookings.end_date BETWEEN  '".$from_date."' and  '".$to_date."')".
+        "	  group by rooms.id, rooms.name ".
+        " ) b ON b.ID = p.id".
+        " WHERE '".$from_date."' >= a.start_date  AND  '".$to_date."' <= a.end_date ".
+        " AND ifnull(b.checkin,0)<>-1";
 
         Debugbar::info('$searchQuery: '.$searchQuery);
 
         $searchResult = DB::select($searchQuery);
         Debugbar::info($searchResult);
-
-        /*
-        $properties = Property::all();
-        $offers = array();
-        foreach ($properties as $propertie) {
-          $offers[$propertie['id']] = 1;//Property::where('id', $propertie['id']);
-          //$offers[] = Property::where('article_id', $article['id'])->groupBy('user_id')->get();
-        }*/
-
 
         return response()->json([
             'data' => $searchResult

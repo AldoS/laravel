@@ -22,7 +22,7 @@ class CreatePropertiesTable extends Migration
             $table->timestamps();
         });
 
-        Schema::create('availability', function (Blueprint $table) {
+        Schema::create('availabilities', function (Blueprint $table) {
             $table->increments('id');
             $table->date('start_date');
             $table->date('end_date');
@@ -39,6 +39,6 @@ class CreatePropertiesTable extends Migration
     public function down()
     {
         Schema::dropIfExists('properties');
-        Schema::dropIfExists('availability');
+        Schema::dropIfExists('availabilities');
     }
 }

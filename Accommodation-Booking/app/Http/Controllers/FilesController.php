@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Property;
 use Debugbar;
 
 class FilesController extends Controller
@@ -19,8 +20,17 @@ class FilesController extends Controller
         ]);
 
         $vNewPropertyId = $request->input('property_id');
-        //$path = $request->file('image')->store('/PropertImages');
-        $path = $request->file('image')->storeAs('http://aldo.itphoenix.gr/PropertyImages', 'property-'.$vNewPropertyId.'.jpeg');
-        return response()->json(['path' => $path], 200);
+
+        $property = Property::find($vNewPropertyId);
+        if(is_null($property)) {
+            return response()->json(null, 404);
+        }
+        else {
+          //$path = $request->file('image')->store('/PropertImages');
+          $path = $request->file('image')->storeAs('/PropertyImages', 'property-'.$vNewPropertyId.'.jpeg');
+          $property->imageUrl = $path;
+          $property->save();
+          return response()->json(['path' => $path], 200);
+        }
     }
 }
